@@ -29,20 +29,12 @@ DSH 界面可视化定制插件。安装后，左下角「设置」弹窗中会�
 
 ## 安装（用户）
 
-将构建产物安装到你的 DSH profile：
-
-```bash
-# 方式一：本地目录（热装配，立即生效）
-npm run build:all
-dsh plugin install /path/to/dsh-ui-customizer   # 如你的 DSH 提供该命令
-```
-
-或在 profile 的 `package.json` 中声明依赖与 bundle（以 web profile 为例）：
+从 [GitHub Releases](https://github.com/nanami-0713/dsh-ui-customizer/releases/latest) 下载 `dsh-external-dsh-ui-customizer-<version>.tgz`，然后在你的 DSH profile（如 `~/.dsh/profiles/web/package.json`）中声明：
 
 ```json
 {
   "dependencies": {
-    "@dsh-external/dsh-ui-customizer": "file:/path/to/dsh-ui-customizer"
+    "@dsh-external/dsh-ui-customizer": "https://github.com/nanami-0713/dsh-ui-customizer/releases/download/v0.2.0/dsh-external-dsh-ui-customizer-0.2.0.tgz"
   },
   "dsh": {
     "profile": {
@@ -54,7 +46,17 @@ dsh plugin install /path/to/dsh-ui-customizer   # 如你的 DSH 提供该命令
 }
 ```
 
-然后重启 DSH（或使用超级模组注入器热加载）。打开左下角「设置」，即可看到「自定义背景」。
+重新安装依赖并重启 DSH（或使用超级模组注入器热加载）。打开左下角「设置」，即可看到「自定义背景」。
+
+本地开发目录安装：
+
+```json
+{
+  "dependencies": {
+    "@dsh-external/dsh-ui-customizer": "file:/path/to/dsh-ui-customizer"
+  }
+}
+```
 
 ## 开发
 

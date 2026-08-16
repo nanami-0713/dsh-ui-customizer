@@ -71,5 +71,13 @@
       ],
       "platform": "web"
     }
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nanami-0713/dsh-ui-customizer.git"
+  },
+  "bugs": {
+    "url": "https://github.com/nanami-0713/dsh-ui-customizer/issues"
+  },
+  "homepage": "https://github.com/nanami-0713/dsh-ui-customizer#readme"
 }
