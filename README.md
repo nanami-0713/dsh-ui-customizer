@@ -35,7 +35,7 @@ DSH 界面可视化定制插件。安装后，左下角「设置」弹窗中会�
 ```json
 {
   "dependencies": {
-    "@dsh-external/dsh-ui-customizer": "https://github.com/nanami-0713/dsh-ui-customizer/releases/download/v0.3.0/dsh-external-dsh-ui-customizer-0.3.0.tgz"
+    "@dsh-external/dsh-ui-customizer": "https://github.com/nanami-0713/dsh-ui-customizer/releases/download/v<版本>/dsh-external-dsh-ui-customizer-<版本>.tgz"
   },
   "dsh": {
     "profile": {
@@ -54,7 +54,7 @@ DSH 界面可视化定制插件。安装后，左下角「设置」弹窗中会�
 ```json
 {
   "dependencies": {
-    "@dsh-external/dsh-ui-customizer": "file:/path/to/dsh-ui-customizer"
+    "@dsh-external/dsh-ui-customizer": "file:/<替换为你的插件目录绝对路径>"
   }
 }
 ```
