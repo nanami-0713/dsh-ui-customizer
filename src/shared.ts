@@ -64,6 +64,10 @@ export interface FontConfig {
   family: string
   /** 代码字体（覆盖 --ds-font-family-code）；留空表示不覆盖。 */
   codeFamily: string
+  /** 字体大小（全局缩放，80–150，100 = 不缩放）。DSH 大量字号是硬编码 px，全局缩放是稳定覆盖所有界面的方式。 */
+  size: number
+  /** 主文字颜色（覆盖 --dsw-alias-label-primary），浅色 / 深色分别配置。 */
+  color: BackgroundColorConfig
 }
 
 export interface LayoutConfig {
@@ -110,6 +114,8 @@ export const DEFAULT_CONFIG: CustomizerConfig = Object.freeze({
   font: Object.freeze({
     family: '',
     codeFamily: '',
+    size: 100,
+    color: Object.freeze({ light: '#0F1115', dark: '#F9FAFB' }),
   }),
   layout: Object.freeze({
     enabled: false,
@@ -201,9 +207,16 @@ export const THEME_PRESETS: readonly ThemePreset[] = [
   },
 ]
 
-/** 把预设叠加到当前配置上：保留布局与自定义 CSS，只替换背景与字体。 */
+/**
+ * 把预设叠加到当前配置上：替换背景，字体只覆盖预设声明的字段
+ * （字体大小 / 文字颜色属于用户可访问性偏好，切换主题时保留）。
+ */
 export function applyThemePreset(current: CustomizerConfig, preset: ThemePreset): CustomizerConfig {
-  return normalizeConfig({ ...current, background: preset.background, font: preset.font })
+  return normalizeConfig({
+    ...current,
+    background: preset.background,
+    font: { ...current.font, ...preset.font },
+  })
 }
 
 /** 背景 + 字体的稳定指纹，用于判断当前配置匹配哪个预设。 */
@@ -239,6 +252,7 @@ export function normalizeConfig(input: unknown): CustomizerConfig {
   const gradient = isRecord(background.gradient) ? background.gradient : {}
   const image = isRecord(background.image) ? background.image : {}
   const font = isRecord(root.font) ? root.font : {}
+  const fontColor = isRecord(font.color) ? font.color : {}
   const layout = isRecord(root.layout) ? root.layout : {}
 
   return {
@@ -271,6 +285,11 @@ export function normalizeConfig(input: unknown): CustomizerConfig {
     font: {
       family: stringValue(font.family, '', 512),
       codeFamily: stringValue(font.codeFamily, '', 512),
+      size: Math.round(clampNumber(font.size, 80, 150, DEFAULT_CONFIG.font.size)),
+      color: {
+        light: stringValue(fontColor.light, DEFAULT_CONFIG.font.color.light, 128),
+        dark: stringValue(fontColor.dark, DEFAULT_CONFIG.font.color.dark, 128),
+      },
     },
     layout: {
       enabled: typeof layout.enabled === 'boolean' ? layout.enabled : DEFAULT_CONFIG.layout.enabled,

@@ -871,6 +871,39 @@ function CustomizerSection(props: CustomizerSectionProps): JSX.Element {
               />
             </div>
           </div>
+          <div className="duic-card">
+            <h3>字体大小</h3>
+            <RangeField
+              label="全局字号缩放"
+              value={draft.font.size}
+              min={80}
+              max={150}
+              suffix="%"
+              onChange={(size) => setFont({ size })}
+            />
+            <p className="duic-muted">
+              DSH 大量字号是硬编码像素值，因此这里使用浏览器全局缩放来稳定覆盖所有界面文字；
+              100% 为默认。缩放也会同步作用于间距和图标，视觉上相当于整体放大 / 缩小界面。
+            </p>
+          </div>
+          <div className="duic-card">
+            <h3>文字颜色</h3>
+            <div className="duic-grid">
+              <ColorField
+                label="浅色模式主文字"
+                value={draft.font.color.light}
+                onChange={(light) => setFont({ color: { ...draft.font.color, light } })}
+              />
+              <ColorField
+                label="深色模式主文字"
+                value={draft.font.color.dark}
+                onChange={(dark) => setFont({ color: { ...draft.font.color, dark } })}
+              />
+            </div>
+            <p className="duic-muted">
+              覆盖 DSH 的 --dsw-alias-label-primary 主文字颜色；次要 / 强调文字仍跟随主题，保证层级对比。
+            </p>
+          </div>
         </>
       )}
 
@@ -953,6 +986,8 @@ export function apply(ctx: ClientContext): void {
   let bgLayer: HTMLDivElement | null = null
   let disposeTokens: (() => void) | null = null
   let frameRaf = 0
+  let fontScaleFrame: HTMLElement | null = null
+  let appliedFontSize: number | null = null
 
   const currentConfig = (): CustomizerConfig => store.getSnapshot().config
   const currentScheme = (): 'light' | 'dark' => ctx.theme.getTheme().active.colorScheme
@@ -1006,6 +1041,11 @@ export function apply(ctx: ClientContext): void {
         light: cfg.font.codeFamily,
         dark: cfg.font.codeFamily,
       }
+    }
+    // 主文字颜色始终覆盖（默认值等于 DSH 原生配色，用户改过才产生差异）。
+    tokens['--dsw-alias-label-primary'] = {
+      light: cfg.font.color.light,
+      dark: cfg.font.color.dark,
     }
     const previous = disposeTokens
     disposeTokens = null
@@ -1065,11 +1105,41 @@ export function apply(ctx: ClientContext): void {
       document.body.style.removeProperty('--duic-details')
       return
     }
-    const frame = document.querySelector<HTMLElement>('div[data-shell-overlay="true"]')?.parentElement
+    const frame: HTMLElement | null =
+      document.querySelector<HTMLElement>('div[data-shell-overlay="true"]')?.parentElement ?? null
     const sidebarCollapsed = frame?.hasAttribute('data-sidebar-collapsed') ?? false
     const detailsCollapsed = frame?.hasAttribute('data-details-collapsed') ?? false
     document.body.style.setProperty('--duic-sidebar', sidebarCollapsed ? '56px' : `${cfg.sidebarWidth}px`)
     document.body.style.setProperty('--duic-details', detailsCollapsed ? '0px' : `${cfg.detailsWidth}px`)
+  }
+
+  function resetFontScaleFrame(frame: HTMLElement | null): void {
+    if (!frame) return
+    frame.style.removeProperty('zoom')
+    frame.style.removeProperty('width')
+    frame.style.removeProperty('height')
+  }
+
+  function syncFontScale(): void {
+    const size = currentConfig().font.size
+    const frame: HTMLElement | null =
+      document.querySelector<HTMLElement>('div[data-shell-overlay="true"]')?.parentElement ?? null
+    if (fontScaleFrame !== frame) {
+      resetFontScaleFrame(fontScaleFrame)
+      fontScaleFrame = frame
+      appliedFontSize = null
+    }
+    if (!frame || appliedFontSize === size) return
+    appliedFontSize = size
+    if (size === 100) {
+      resetFontScaleFrame(frame)
+      return
+    }
+    const scale = size / 100
+    // CSS zoom 会缩放元素自身尺寸，这里反向补偿宽高，让 AppFrame 仍铺满视口。
+    frame.style.setProperty('zoom', String(scale))
+    frame.style.setProperty('width', `calc(100% / ${scale})`)
+    frame.style.setProperty('height', `calc(100% / ${scale})`)
   }
 
   function applyAll(): void {
@@ -1078,11 +1148,13 @@ export function apply(ctx: ClientContext): void {
     applyTokens()
     applySurface()
     syncLayout()
+    syncFontScale()
   }
 
   function startFrameLoop(): void {
     const tick = (): void => {
       syncLayout()
+      syncFontScale()
       frameRaf = window.requestAnimationFrame(tick)
     }
     frameRaf = window.requestAnimationFrame(tick)
@@ -1101,6 +1173,9 @@ export function apply(ctx: ClientContext): void {
       window.cancelAnimationFrame(frameRaf)
       disposeTokens?.()
       disposeTokens = null
+      resetFontScaleFrame(fontScaleFrame)
+      fontScaleFrame = null
+      appliedFontSize = null
       document.body.classList.remove('duic-layout-on')
       document.body.style.removeProperty('--duic-sidebar')
       document.body.style.removeProperty('--duic-details')
