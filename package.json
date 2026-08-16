@@ -1,6 +1,6 @@
 {
   "name": "@dsh-external/dsh-ui-customizer",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "DSH 界面可视化定制插件：在左下角「设置」弹窗中新增「自定义背景」入口，可视化配置背景（纯色/渐变/图片）、字体、布局（侧边栏/详情栏宽度）与自定义 CSS，配置持久化到 ~/.dsh/plugins/dsh-ui-customizer/config.json，无需手工改配置文件",
   "private": false,
   "type": "module",
