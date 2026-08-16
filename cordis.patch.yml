@@ -1,0 +1,7 @@
+# @dsh-external/dsh-ui-customizer — DSH bundle patch.
+# Host half: 提供 ~/.dsh/plugins/dsh-ui-customizer/config.json 的读写 HTTP API。
+# Client half: 在设置弹窗注册「自定义背景」页（settings.section），可视化定制
+# 背景 / 字体 / 布局 / 自定义 CSS，并通过官方 theme token + 样式注入实时生效。
+- insert:
+    - id: dsh-ui-customizer
+      name: '@dsh-external/dsh-ui-customizer'
