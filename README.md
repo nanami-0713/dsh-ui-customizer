@@ -15,6 +15,16 @@ DSH 界面可视化定制插件。安装后，左下角「设置」弹窗中会�
   ~/.dsh/plugins/dsh-ui-customizer/config.json
   ```
 
+## 平台支持
+
+| 组件 | macOS | Windows | Linux |
+| --- | --- | --- | --- |
+| 插件运行时（配置 API / 图片上传） | ✓ | ✓ | ✓ |
+| 设置页 UI（主题预设 / 背景 / 字体 / 布局 / CSS） | ✓ | ✓ | ✓ |
+| 本地构建脚本 | ✓（bash） | 需 Git Bash / WSL，或直接 `npm run build:all` | ✓（bash） |
+
+安装分发使用 npm 包（tgz），Windows 用户无需在本机构建。
+
 ## 原理
 
 | 能力 | 实现方式 |
