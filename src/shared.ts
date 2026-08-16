@@ -11,6 +11,12 @@ export const PLUGIN_ID = '@dsh-external/dsh-ui-customizer'
 /** 本地配置 API（同源路径，由 host 半注册在 webserver 上）。 */
 export const CONFIG_API_PATH = '/api/dsh-ui-customizer/config'
 
+/** 本地图片上传/读取 API（POST 上传，GET /api/dsh-ui-customizer/image/<file> 读取）。 */
+export const IMAGE_API_PATH = '/api/dsh-ui-customizer/image'
+
+/** 上传图片大小上限：15MB。 */
+export const MAX_IMAGE_BYTES = 15 * 1024 * 1024
+
 export const CONFIG_VERSION = 1
 
 export type BackgroundMode = 'color' | 'gradient' | 'image'

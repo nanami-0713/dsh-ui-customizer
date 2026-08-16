@@ -18,13 +18,15 @@
  * 持久化由 host half 的同源 HTTP API 负责。
  */
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
-import type { CSSProperties } from 'react'
+import type { ChangeEvent, CSSProperties } from 'react'
 import type { ClientContext } from '@deepseek-ai/dsh-client-runtime/client'
 import type { SettingsSectionOwnerProps } from '@deepseek-ai/dsh-client-ui-settings/client'
 import type { ThemeTokenOverrides } from '@deepseek-ai/dsh-client-ui-theme/client'
 import {
   CONFIG_API_PATH,
   DEFAULT_CONFIG,
+  IMAGE_API_PATH,
+  MAX_IMAGE_BYTES,
   PLUGIN_ID,
   THEME_PRESETS,
   applyThemePreset,
@@ -116,6 +118,25 @@ class ConfigStore {
   }
 }
 
+/** 把本地图片文件上传到 host，返回同源 URL。 */
+async function uploadLocalImage(file: File): Promise<string> {
+  if (file.size > MAX_IMAGE_BYTES) {
+    throw new Error(`图片超过 ${Math.round(MAX_IMAGE_BYTES / 1024 / 1024)}MB 上限`)
+  }
+  const response = await fetch(IMAGE_API_PATH, {
+    method: 'POST',
+    headers: { 'content-type': file.type || 'application/octet-stream' },
+    body: await file.arrayBuffer(),
+  })
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => null)) as { message?: string } | null
+    throw new Error(payload?.message ?? `上传失败（HTTP ${response.status}）`)
+  }
+  const payload = (await response.json()) as { url?: string }
+  if (!payload.url) throw new Error('上传响应缺少图片地址')
+  return payload.url
+}
+
 /* ─────────────────────────── 全局注入样式 ─────────────────────────── */
 
 const BASE_CSS = `
@@ -147,6 +168,9 @@ body.duic-layout-on div:has(> [data-shell-overlay="true"]):not([data-dragging]) 
 .duic-check{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--dsw-alias-label-secondary);cursor:pointer;user-select:none}
 .duic-check input{accent-color:var(--dsw-alias-brand-primary-new-colorprimary-new-color)}
 .duic-color-row{display:flex;align-items:center;gap:8px}
+.duic-upload-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.duic-upload-error{color:var(--dsw-alias-state-error-primary);font-size:11px}
+.duic-upload-ok{color:var(--dsw-alias-state-success-primary);font-size:11px}
 .duic-color{width:36px;height:28px;padding:2px;border:1px solid var(--dsw-alias-border-l2);border-radius:8px;background:var(--dsw-specific-input-major);cursor:pointer}
 .duic-range{width:100%;accent-color:var(--dsw-alias-brand-primary-new-colorprimary-new-color)}
 .duic-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
@@ -196,6 +220,78 @@ function ColorField(props: {
           onChange={(event) => props.onChange(event.target.value)}
         />
       </div>
+    </div>
+  )
+}
+
+function ImageUrlField(props: {
+  label: string
+  value: string
+  onChange: (value: string) => void
+}): JSX.Element {
+  const inputRef = useRef<HTMLInputElement | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [ok, setOk] = useState(false)
+
+  const pick = (): void => {
+    inputRef.current?.click()
+  }
+
+  const onFile = async (event: ChangeEvent<HTMLInputElement>): Promise<void> => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+    setBusy(true)
+    setError(null)
+    setOk(false)
+    try {
+      const url = await uploadLocalImage(file)
+      props.onChange(url)
+      setOk(true)
+    } catch (uploadError) {
+      setError(uploadError instanceof Error ? uploadError.message : String(uploadError))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="duic-field">
+      <span className="duic-label">{props.label}</span>
+      <div className="duic-upload-row">
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/png,image/jpeg,image/webp,image/gif"
+          style={{ display: 'none' }}
+          onChange={(event) => {
+            void onFile(event)
+          }}
+        />
+        <button type="button" className="duic-btn" onClick={pick} disabled={busy}>
+          {busy ? '上传中…' : '上传本地图片'}
+        </button>
+        {props.value && (
+          <button type="button" className="duic-btn" onClick={() => props.onChange('')}>
+            清除
+          </button>
+        )}
+      </div>
+      <input
+        type="text"
+        className="duic-input"
+        placeholder="上传后自动填入；也可以直接粘贴图片 URL"
+        value={props.value}
+        spellCheck={false}
+        onChange={(event) => {
+          props.onChange(event.target.value)
+          setError(null)
+          setOk(false)
+        }}
+      />
+      {ok && <span className="duic-upload-ok">已上传，正在使用本地图片</span>}
+      {error && <span className="duic-upload-error">{error}</span>}
     </div>
   )
 }
@@ -577,28 +673,20 @@ function CustomizerSection(props: CustomizerSectionProps): JSX.Element {
           {draft.background.mode === 'image' && (
             <div className="duic-card">
               <h3>背景图片</h3>
-              <div className="duic-field">
-                <span className="duic-label">浅色模式图片 URL</span>
-                <input
-                  type="text"
-                  className="duic-input"
-                  placeholder="https://… 或 data:image/…，留空表示不使用"
-                  value={draft.background.image.light}
-                  spellCheck={false}
-                  onChange={(event) => setImage({ light: event.target.value })}
-                />
-              </div>
-              <div className="duic-field">
-                <span className="duic-label">深色模式图片 URL</span>
-                <input
-                  type="text"
-                  className="duic-input"
-                  placeholder="https://… 或 data:image/…，留空表示不使用"
-                  value={draft.background.image.dark}
-                  spellCheck={false}
-                  onChange={(event) => setImage({ dark: event.target.value })}
-                />
-              </div>
+              <ImageUrlField
+                label="浅色模式图片"
+                value={draft.background.image.light}
+                onChange={(light) => setImage({ light })}
+              />
+              <ImageUrlField
+                label="深色模式图片"
+                value={draft.background.image.dark}
+                onChange={(dark) => setImage({ dark })}
+              />
+              <p className="duic-muted">
+                支持本地上传（PNG / JPEG / WebP / GIF，≤15MB）或粘贴图片 URL；本地图片保存在
+                ~/.dsh/plugins/dsh-ui-customizer/images/。
+              </p>
               <div className="duic-grid">
                 <div className="duic-field">
                   <span className="duic-label">缩放</span>
